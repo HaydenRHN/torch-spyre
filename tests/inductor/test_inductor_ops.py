@@ -4959,6 +4959,17 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
                     0,
                     cached_randn((5, 10), dtype=torch.float16),
                 ),
+                # Matches gemma-4 model pattern: bool condition, scalar fill, int64 tensor
+                "int64_1x1": (
+                    torch.zeros(1, 1, dtype=torch.bool),
+                    0,
+                    torch.randint(0, 1000, (1, 1), dtype=torch.int64),
+                ),
+                "int64_1x24": (
+                    torch.zeros(1, 24, dtype=torch.bool),
+                    0,
+                    torch.randint(0, 1000, (1, 24), dtype=torch.int64),
+                ),
             },
         },
         ("test_where_scalar", "test_where_eager_scalar"): {
