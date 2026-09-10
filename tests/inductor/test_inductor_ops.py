@@ -4921,9 +4921,9 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
                 ),
                 # Matches Mistral-Small-3.2 masked_scatter pattern (bool, fp16, fp16)
                 "fp16_col_broadcast_3d": (
-                    torch.zeros(2, 16, 1, dtype=torch.bool),
-                    cached_randn((2, 16, 64), dtype=torch.float16),
-                    cached_randn((2, 16, 64), dtype=torch.float16),
+                    torch.zeros(1, 855, 1, dtype=torch.bool),
+                    cached_randn((1, 855, 5120), dtype=torch.float16),
+                    cached_randn((1, 855, 5120), dtype=torch.float16),
                 ),
                 "fp16_col_broadcast_3d_mixed": (
                     cached_randn((2, 16, 1), dtype=torch.float16) > 0,
