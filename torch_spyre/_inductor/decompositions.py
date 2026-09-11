@@ -1778,11 +1778,18 @@ def spyre_triu(
     input: torch.Tensor,
     diagonal: int = 0,
 ) -> torch.Tensor:
+    # Narrow integral dtypes have no on-device elementwise masking op (mul and
+    # where are both rejected for SENUINT32/SENINT8/IEEE_INT32), so keep them
+    # on the CPU fallback that aten.triu used before this decomposition existed.
+    if not (input.dtype.is_floating_point or input.dtype == torch.bool):
+        return torch.ops.spyre.triu_cpu(input, diagonal)
+
     h, w = input.shape[-2], input.shape[-1]
 
     # spyre::triu_mask builds [H,W] upper triangular mask on CPU and
-    # transfers it to the input device. Wrapping this in a custom op makes the
-    # CPU-side in-place ops opaque to torch.compile, so assert_functional_graph
+    # transfers it to the input device. Wrapping this in a custom op keeps the
+    # CPU-side construction opaque to torch.compile, so assert_functional_graph
     # is satisfied and the compiled graph sees only the resulting Spyre tensor.
     mask = torch.ops.spyre.triu_mask(h, w, diagonal, input.dtype, input.device)
+    # Masking +/-inf this way works on device but would produce NaN under IEEE
     return input * mask

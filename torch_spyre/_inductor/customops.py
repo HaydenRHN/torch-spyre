@@ -1034,6 +1034,27 @@ def _(
     return torch.empty(1, 1, seqlen_q, seqlen_kv, dtype=dtype, device=device)
 
 
+@torch.library.custom_op("spyre::triu_cpu", mutates_args=())
+def triu_cpu(input: torch.Tensor, diagonal: int) -> torch.Tensor:
+    """
+    CPU fallback for torch.triu on dtypes with no Spyre elementwise support.
+
+    The mask-multiply decomposition needs an elementwise mul, which the device
+    rejects for the narrow integral formats (uint8 -> SENUINT32, int8 ->
+    SENINT8, int32 -> IEEE_INT32); torch.where is rejected for the same
+    formats, so there is no on-device masking path at all.  Mirrors
+    max_dim_int64_fallback: the Spyre kernel is registered in fallbacks.py, and
+    this CompositeExplicitAutograd body computes the real result so calls with
+    non-Spyre inputs (e.g. compare_with_cpu paths) still work.
+    """
+    return torch.triu(input, diagonal)
+
+
+@triu_cpu.register_fake
+def _(input: torch.Tensor, diagonal: int) -> torch.Tensor:
+    return torch.empty_like(input)
+
+
 @torch.library.custom_op("spyre::triu_mask", mutates_args=())
 def triu_mask(
     h: int,
@@ -1381,6 +1402,7 @@ def _(input: torch.Tensor, dim: int, keepdim: bool = False) -> torch.Tensor:
 mark_lx_safe(torch.ops.spyre.to_dtype_cpu.default)
 mark_lx_safe(torch.ops.spyre.unfold.default)
 mark_lx_safe(torch.ops.spyre.causal_mask.default)
+mark_lx_safe(torch.ops.spyre.triu_mask.default)
 # max_dim_int64_fallback/min_dim_int64_fallback/max_default_int64_fallback are
 # registered via ops/fallbacks.py's register_fallback, which already appends
 # them to fallback_ops -- _is_cpu_only_fallback (lx_context_switching.py)
