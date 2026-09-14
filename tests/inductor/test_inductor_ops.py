@@ -7435,6 +7435,7 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
 
         self.compare_with_cpu(fn, x)
 
+    @pytest.mark.filterwarnings("error::torch_spyre.ops.fallbacks.FallbackWarning")
     def test_triu_cpu(self, x, diagonal):
         def fn(input, diagonal):
             return torch.triu(input, diagonal)
