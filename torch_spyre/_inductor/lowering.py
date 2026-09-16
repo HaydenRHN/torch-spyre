@@ -1809,18 +1809,24 @@ def lower_where(condition, self, other):
     # is computed separately via DEFAULT promotion to preserve int semantics).
     #
     # CONDITION
-    # The condition is cast to val_dtype so its physical stick size aligns with
-    # the value tensors before reaching where3. For bool conditions this is an
-    # IDENTITY cast when the bool's backing already matches val_dtype (e.g. a
-    # host fp16-backed bool cast to fp16, or a computed fp32-backed bool cast to
-    # fp32). A cross-width cast (e.g. bool32 → fp16) is a stick-reordering op
-    # (FP32TODL16) which produces a staggered EA on the condition. That stagger
-    # mismatches the STANDARD EA of the value tensors and propagate_layouts
-    # raises Unsupported via the mixed-EA case 3.3 in _multi_arg_pointwise_layouts.
+    # The condition is cast to val_dtype to align stick sizes. For a computed
+    # fp32-backed bool this is an IDENTITY cast (same width). A cross-width
+    # cast (e.g. bool32 → fp16) emits FP32TODL16, producing a staggered EA
+    # that mismatches the STANDARD value tensors; propagate_layouts raises
+    # Unsupported via case 3.3 in _multi_arg_pointwise_layouts.
+    #
+    # Exception: host bool InputBuffer + val_dtype==fp16. The cast is skipped
+    # entirely. Host bools are always SEN169_FP16 (64 elems/stick) so no
+    # width alignment is needed, and skipping avoids materialising stride-0
+    # expanded masks (e.g. [B,S,1] expanded to [B,S,C] with stride[-1]==0).
+    # Casting would produce a contiguous fp16 buffer and break any downstream
+    # indirect gather that depends on the mask staying virtual. Computed bools
+    # are NOT skipped even when fp16-backed: they must pass through to_dtype so
+    # propagate_layouts can resolve their device_dtype from the STL.
     #
     # Behaviour per value dtype:
-    #   fp16/bf16:  no-op; condition must be fp16-backed to match stick size
-    #   fp32:       no-op; condition must be fp32-backed to match stick size
+    #   fp16/bf16:  host bool skips cast; computed bool and others cast normally
+    #   fp32:       condition cast to fp32 (aligns sticks; host bool via CPU fallback)
     #   int32:      INT32TOFP32 (Spyre-native); cast back to int32 after
     #   int64:      CPU fallback for int→fp32; cast back to int64 after
 
@@ -1849,11 +1855,18 @@ def lower_where(condition, self, other):
     converted_other = (
         other if other.get_dtype() == val_dtype else to_dtype(other, val_dtype)
     )
-    converted_condition = (
-        condition
-        if condition.get_dtype() == val_dtype
-        else to_dtype(condition, val_dtype)
+
+    # For fp16 values, skip the condition cast only when the condition is
+    # a host bool InputBuffer (fp16 tensor). Skipping avoids materialising
+    # stride-0 expanded bool masks. Computed bools (not InputBuffer) must
+    # be cast so their device_dtype can be resolved by propagate_layouts.
+    skip_cast = (
+        val_dtype == torch.float16
+        and condition.get_dtype() == torch.bool
+        and isinstance(_peel_through_views(condition), ir.InputBuffer)
     )
+
+    converted_condition = condition if skip_cast else to_dtype(condition, val_dtype)
 
     result = lowering.where(converted_condition, converted_self, converted_other)
 
