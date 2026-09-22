@@ -589,7 +589,15 @@ def _single_arg_op_layout(
             # bool-equivalent dtype of the STL's device_dtype as the source.
             ea_src_dtype = in_layout.dtype
             if ea_src_dtype == torch.bool:
-                ea_src_dtype = bool_equivalent_dtype(stl.device_dtype) or ea_src_dtype
+                resolved_dtype = bool_equivalent_dtype(stl.device_dtype)
+                if resolved_dtype is not None:
+                    ea_src_dtype = resolved_dtype
+                else:
+                    logger.warning(
+                        "bool input has unrecognised device_dtype %s; "
+                        "falling back to torch.bool for EA map lookup",
+                        stl.device_dtype,
+                    )
 
             fmt = DtypeOpTable.ea_map(ea_src_dtype, output.dtype, input_ea)
 

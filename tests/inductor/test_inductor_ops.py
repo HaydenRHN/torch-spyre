@@ -5080,6 +5080,17 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
                     cached_randn((2, 16, 64), dtype=torch.float16),
                     cached_randn((2, 16, 64), dtype=torch.float16),
                 ),
+                # int32: INT32TOFP32 on Spyre; result cast back to int32
+                "int32_2d": (
+                    torch.zeros(4, 32, dtype=torch.bool),
+                    torch.randint(0, 1000, (4, 32), dtype=torch.int32),
+                    torch.randint(0, 1000, (4, 32), dtype=torch.int32),
+                ),
+                "int32_3d": (
+                    torch.zeros(2, 8, 64, dtype=torch.bool),
+                    torch.randint(0, 1000, (2, 8, 64), dtype=torch.int32),
+                    torch.randint(0, 1000, (2, 8, 64), dtype=torch.int32),
+                ),
             },
         },
         ("test_where_scalarother", "test_where_eager"): {

@@ -1862,7 +1862,8 @@ def lower_where(condition, self, other):
     # inputs stay at their native width and only integers are promoted to fp32.
     # For integer inputs the result is cast back to the original dtype
     # afterwards (INT_TO_FLOAT promotes the result dtype too, so result_dtype
-    # is computed separately via DEFAULT promotion to preserve int semantics).
+    # is computed separately via NO_OPMATH promotion — which keeps fp16/bf16
+    # as-is and integers as integers, matching aten.where.self semantics).
     #
     # CONDITION
     # The condition is cast to val_dtype to align stick sizes. For a computed
@@ -1889,12 +1890,12 @@ def lower_where(condition, self, other):
     self_t = torch.empty(0, dtype=self.get_dtype())
     other_t = torch.empty(0, dtype=other.get_dtype())
 
-    # result_dtype: what aten.where.self must return — DEFAULT promotion, which
-    # keeps integers as integers (e.g. int64 + int64 → int64).
+    # result_dtype: what aten.where.self must return — NO_OPMATH promotion, which
+    # prevents unintended fp16->fp32 promotion and ensures output dtype is correct
     result_dtype, _ = elementwise_dtypes(
         self_t,
         other_t,
-        type_promotion_kind=ELEMENTWISE_TYPE_PROMOTION_KIND.DEFAULT,
+        type_promotion_kind=ELEMENTWISE_TYPE_PROMOTION_KIND.NO_OPMATH,
     )
 
     # val_dtype: the dtype we run the hardware op in — INT_TO_FLOAT promotes
@@ -1929,6 +1930,8 @@ def lower_where(condition, self, other):
     # INT_TO_FLOAT promotes integers to float for the hardware op, but the
     # caller expects the natural result dtype (e.g. int64 in, int64 out).
     # Cast back if the working dtype diverged from the natural result dtype.
+    # Realize the where result to prevent unintended fusing on fp32->int32
+    result.realize()
     if result_dtype != val_dtype:
         result = to_dtype(result, result_dtype)
 
