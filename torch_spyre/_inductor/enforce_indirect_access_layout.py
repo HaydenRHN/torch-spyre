@@ -38,7 +38,7 @@ from torch._inductor.ir import (
     ReinterpretView,
     Scatter,
 )
-from torch_spyre._C import DataFormats, SpyreTensorLayout
+from torch_spyre._C import SpyreTensorLayout
 
 from .constants import ELIDED_COPY_BACK_ATTR, RESTICKIFY_SUPPORTED_DEVICE_DTYPES
 from .errors import Unsupported

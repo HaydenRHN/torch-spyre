@@ -55,7 +55,6 @@ from torch.fx.experimental.symbolic_shapes import free_unbacked_symbols
 from torch._inductor.virtualized import V
 from torch.utils._ordered_set import OrderedSet
 from torch_spyre._C import (
-    DataFormats,
     ElementArrangement,
     SpyreTensorLayout,
     get_device_dtype,
