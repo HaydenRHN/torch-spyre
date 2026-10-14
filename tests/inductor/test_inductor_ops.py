@@ -1459,8 +1459,9 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
                 "abs": lambda x, y: x + y.expand_as(x).abs(),
                 "add_then_gt": lambda x, y: x > y.expand_as(x) + 1,
                 # Both operands of the inner add are expanded.
-                "add_two_expanded": lambda x, y: x
-                - (y.expand_as(x) + (y - 3).expand_as(x)),
+                "add_two_expanded": lambda x, y: (
+                    x - (y.expand_as(x) + (y - 3).expand_as(x))
+                ),
             },
             # Small integers keep the op exact in float16; y is shifted so it differs
             # from x.
@@ -10415,49 +10416,38 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
     def test_unbind_cpu(self, dim: int, x):
         self.compare_with_cpu(lambda a: torch.unbind(a, dim=dim), x)
 
-    @expects_raise
-    def test_restickify_fp32_unsupported(self):
-        """An op that needs a restickify has no feasible layout for FP32.
-
-        ``x.t() + y`` needs a restickify, which only exists for the DL16 format
-        (fp16 and bf16; both compile and match the CPU). With FP32 operands the
-        layout optimizer finds no feasible layout. That is its generic "no
-        mechanism to resolve stick incompatibility" error, which also fires for
-        other causes (unaligned re-offsets, #1377), so the fragment pins the FP32
-        device dtype that the message lists for each input.
-        """
+    def test_restickify_fp32_cpu(self):
+        """Verify restickify support for FP32 tensors."""
         x = torch.randn((128, 128), dtype=torch.float32)
         y = torch.randn((128, 128), dtype=torch.float32)
-        # Transpose creates layout incompatibility that triggers restickify
-        with pytest.raises(
-            Exception, match=r"(?s)no mechanism to resolve stick incompat.*IEEE_FP32"
-        ):
-            self.compare_with_cpu(
-                lambda x, y: x.t() + y,
-                x,
-                y,
-                run_eager=False,
-            )
+        self.compare_with_cpu(
+            lambda x, y: x.t() + y,
+            x,
+            y,
+            run_eager=False,
+        )
 
-    @expects_raise
-    def test_restickify_int64_unsupported(self):
-        """The same, for INT64: there is no feasible layout without a restickify.
-
-        The device computes the int64 add in IEEE_FP32 (the message lists IEEE_FP32
-        for the converted operands), so the fragment pins that dtype, as above.
-        """
+    def test_restickify_int64_cpu(self):
+        """Verify restickify support for INT64 tensors."""
         x = torch.randint(0, 100, (128, 128), dtype=torch.int64)
         y = torch.randint(0, 100, (128, 128), dtype=torch.int64)
-        # Transpose creates layout incompatibility that triggers restickify
-        with pytest.raises(
-            Exception, match=r"(?s)no mechanism to resolve stick incompat.*IEEE_FP32"
-        ):
-            self.compare_with_cpu(
-                lambda x, y: x.t() + y,
-                x,
-                y,
-                run_eager=False,
-            )
+        self.compare_with_cpu(
+            lambda x, y: x.t() + y,
+            x,
+            y,
+            run_eager=False,
+        )
+
+    def test_restickify_int32_cpu(self):
+        """Verify restickify support for INT32 tensors."""
+        x = torch.randint(0, 100, (128, 128), dtype=torch.int32)
+        y = torch.randint(0, 100, (128, 128), dtype=torch.int32)
+        self.compare_with_cpu(
+            lambda x, y: x.t() + y,
+            x,
+            y,
+            run_eager=False,
+        )
 
     def test_fp8_scaled_mm_cpu(self, a, b, scale_a, scale_b, bias):
         """Test _scaled_mm with FP8 inputs."""
