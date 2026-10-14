@@ -23,12 +23,9 @@ RESTICKIFY_OP = "ReStickifyOpHBM"
 RESTICKIFY_SUPPORTED_DEVICE_DTYPES = frozenset(
     {
         DataFormats.SEN169_FP16,
-        DataFormats.IEEE_FP16,
-        DataFormats.BFLOAT16,
         DataFormats.IEEE_FP32,
         DataFormats.IEEE_INT32,
         DataFormats.SENUINT32,
-        DataFormats.IEEE_INT64,
     }
 )
 DEPTHWISE_CONV2D_OP = "depthwiseconv2dnative"

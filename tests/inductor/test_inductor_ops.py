@@ -2253,6 +2253,78 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
                     cached_randn((64, 129)),
                     cached_randn((129, 64)),
                 ),
+                "10x20_add_transpose_fp32": (
+                    cached_randn((10, 20), dtype=torch.float32),
+                    cached_randn((20, 10), dtype=torch.float32),
+                ),
+                "7x13_add_transpose_fp32": (
+                    cached_randn((7, 13), dtype=torch.float32),
+                    cached_randn((13, 7), dtype=torch.float32),
+                ),
+                "64x129_add_transpose_fp32": (
+                    cached_randn((64, 129), dtype=torch.float32),
+                    cached_randn((129, 64), dtype=torch.float32),
+                ),
+                "10x20_add_transpose_int32": (
+                    torch.randint(0, 100, (10, 20), dtype=torch.int32),
+                    torch.randint(0, 100, (20, 10), dtype=torch.int32),
+                ),
+                "7x13_add_transpose_int32": (
+                    torch.randint(0, 100, (7, 13), dtype=torch.int32),
+                    torch.randint(0, 100, (13, 7), dtype=torch.int32),
+                ),
+                "64x129_add_transpose_int32": (
+                    torch.randint(0, 100, (64, 129), dtype=torch.int32),
+                    torch.randint(0, 100, (129, 64), dtype=torch.int32),
+                ),
+                "10x20_add_transpose_int64": (
+                    torch.randint(0, 100, (10, 20), dtype=torch.int64),
+                    torch.randint(0, 100, (20, 10), dtype=torch.int64),
+                ),
+                "7x13_add_transpose_int64": (
+                    torch.randint(0, 100, (7, 13), dtype=torch.int64),
+                    torch.randint(0, 100, (13, 7), dtype=torch.int64),
+                ),
+                "64x129_add_transpose_int64": (
+                    torch.randint(0, 100, (64, 129), dtype=torch.int64),
+                    torch.randint(0, 100, (129, 64), dtype=torch.int64),
+                ),
+            },
+            "expect_fail": {
+                "10x20_add_transpose_int32": "native IEEE_INT32 or IEEE_INT64 add is not supported yet (torch-spyre PR #4462)",
+                "7x13_add_transpose_int32": "native IEEE_INT32 or IEEE_INT64 add is not supported yet (torch-spyre PR #4462)",
+                "64x129_add_transpose_int32": "native IEEE_INT32 or IEEE_INT64 add is not supported yet (torch-spyre PR #4462)",
+                "10x20_add_transpose_int64": "native IEEE_INT32 or IEEE_INT64 add is not supported yet (torch-spyre PR #4462)",
+                "7x13_add_transpose_int64": "native IEEE_INT32 or IEEE_INT64 add is not supported yet (torch-spyre PR #4462)",
+                "64x129_add_transpose_int64": "native IEEE_INT32 or IEEE_INT64 add is not supported yet (torch-spyre PR #4462)",
+            },
+        },
+        ("test_restickify_clone", "test_restickify_clone_cpu"): {
+            "param_sets": {
+                "10x20_clone_fp16": (cached_randn((10, 20)),),
+                "7x13_clone_fp16": (cached_randn((7, 13)),),
+                "64x129_clone_fp16": (cached_randn((64, 129)),),
+                "10x20_clone_fp32": (cached_randn((10, 20), dtype=torch.float32),),
+                "7x13_clone_fp32": (cached_randn((7, 13), dtype=torch.float32),),
+                "64x129_clone_fp32": (cached_randn((64, 129), dtype=torch.float32),),
+                "10x20_clone_int32": (
+                    torch.randint(0, 100, (10, 20), dtype=torch.int32),
+                ),
+                "7x13_clone_int32": (
+                    torch.randint(0, 100, (7, 13), dtype=torch.int32),
+                ),
+                "64x129_clone_int32": (
+                    torch.randint(0, 100, (64, 129), dtype=torch.int32),
+                ),
+                "10x20_clone_int64": (
+                    torch.randint(0, 100, (10, 20), dtype=torch.int64),
+                ),
+                "7x13_clone_int64": (
+                    torch.randint(0, 100, (7, 13), dtype=torch.int64),
+                ),
+                "64x129_clone_int64": (
+                    torch.randint(0, 100, (64, 129), dtype=torch.int64),
+                ),
             }
         },
         ("test_cmp", "test_binary_op_cpu"): {
@@ -8527,6 +8599,12 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
 
         self.compare_with_cpu(fn, a, b, run_eager=False)
 
+    def test_restickify_clone_cpu(self, a):
+        def fn(a):
+            return a.t().clone()
+
+        self.compare_with_cpu(fn, a, run_eager=False)
+
     @pytest.mark.filterwarnings("ignore::torch_spyre.ops.fallbacks.FallbackWarning")
     def test_transpose_patterns_cpu(self, variant, execution_mode, *args):
         if variant == "attn_qkv_projection":
@@ -10415,39 +10493,6 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
 
     def test_unbind_cpu(self, dim: int, x):
         self.compare_with_cpu(lambda a: torch.unbind(a, dim=dim), x)
-
-    def test_restickify_fp32_cpu(self):
-        """Verify restickify support for FP32 tensors."""
-        x = torch.randn((128, 128), dtype=torch.float32)
-        y = torch.randn((128, 128), dtype=torch.float32)
-        self.compare_with_cpu(
-            lambda x, y: x.t() + y,
-            x,
-            y,
-            run_eager=False,
-        )
-
-    def test_restickify_int64_cpu(self):
-        """Verify restickify support for INT64 tensors."""
-        x = torch.randint(0, 100, (128, 128), dtype=torch.int64)
-        y = torch.randint(0, 100, (128, 128), dtype=torch.int64)
-        self.compare_with_cpu(
-            lambda x, y: x.t() + y,
-            x,
-            y,
-            run_eager=False,
-        )
-
-    def test_restickify_int32_cpu(self):
-        """Verify restickify support for INT32 tensors."""
-        x = torch.randint(0, 100, (128, 128), dtype=torch.int32)
-        y = torch.randint(0, 100, (128, 128), dtype=torch.int32)
-        self.compare_with_cpu(
-            lambda x, y: x.t() + y,
-            x,
-            y,
-            run_eager=False,
-        )
 
     def test_fp8_scaled_mm_cpu(self, a, b, scale_a, scale_b, bias):
         """Test _scaled_mm with FP8 inputs."""
