@@ -74,6 +74,7 @@ from .constants import (
     ELIDED_COPY_BACK_ATTR,
     KEEP_BY_INDEX_OP,
     MATMUL_REDUCTION_OPS,
+    RESTICKIFY_SUPPORTED_DEVICE_DTYPES,
     TOPK_OPS,
 )
 from .ir import FixedTiledLayout, SpyreConstantFallback
@@ -2485,14 +2486,13 @@ def compute_restickify_needed(
     ):
         return False, None
 
-    # ReStickifyOpHBM supports only the native FP16 device format
-    # (both logical float16 and bfloat16 map to SEN169_FP16).
+    # ReStickifyOpHBM supports DL16 formats (FP16/BF16), IEEE_FP32, and integer formats (INT32/UINT32/INT64).
     # Do not advertise an edge as feasible when codegen cannot lower it: this
     # is especially important for fp32-upcast graphs, where a later IEEE_FP32
     # restick can otherwise tie with and displace the valid FP16 restick before
     # the conversion. This also deliberately precedes the factorized-layout
-    # target below: a concrete target is not actionable for a non-DL16 input.
-    if in_stl.device_dtype != DataFormats.SEN169_FP16:
+    # target below: a concrete target is not actionable for an unsupported input.
+    if in_stl.device_dtype not in RESTICKIFY_SUPPORTED_DEVICE_DTYPES:
         return True, None
 
     if factorized_layout_mismatch:
