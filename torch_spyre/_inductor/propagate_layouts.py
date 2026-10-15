@@ -81,6 +81,7 @@ from .ir import (
 )
 from .pass_utils import (
     compute_restickify_target_layout,
+    compute_size1_restickify_target,
     concretize_expr,
     expand_sparse,
     find_matmul_generated_var,
@@ -963,6 +964,10 @@ def _find_layout_avoiding_var_on_stick(
             surviving_vars.update(coord.free_symbols)
 
     if not surviving_vars:
+        for stl in arg.layouts:
+            result = compute_size1_restickify_target(stl, arg.layout, arg.dep)
+            if result is not None:
+                return result
         raise Unsupported(
             f"{label}: no surviving coordinates after removing {avoid_var}"
         )

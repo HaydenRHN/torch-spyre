@@ -2174,7 +2174,7 @@ def parse_op_spec(op_spec: OpSpec) -> tuple["SDSCSpec", "dict"]:
                 )
 
     # Set below whenever op_stick_dim is None (pool/conv/generic fallback), but
-    # only ever consumed by the topk branch further down (see
+    # only ever consumed by the topk/keep_by_index branch further down (see
     # injected_dims["topk_stick_fallback_sym"]) -- other ops recompute their own
     # per-arg fallback independently in _create_sdsc_tensors's Step 3.
     op_stick_fallback_sym: Symbol | None = None
@@ -2258,7 +2258,9 @@ def parse_op_spec(op_spec: OpSpec) -> tuple["SDSCSpec", "dict"]:
     injected_dims = {"mb_sym": mb_sym} if mb_sym else {}
     if index_stick_syms:
         injected_dims["index_stick_syms"] = index_stick_syms
-    if _is_topk(op_spec.op) and op_stick_fallback_sym is not None:
+    if (
+        _is_topk(op_spec.op) or _is_keep_by_index(op_spec.op)
+    ) and op_stick_fallback_sym is not None:
         # Force both tensors' Step 3 fallback stick onto the same symbol,
         # since Step 3's default picks independently per arg and can choose
         # different symbols for topk's input vs. output.
