@@ -2487,7 +2487,9 @@ def compute_restickify_needed(
     ):
         return False, None
 
-    # ReStickifyOpHBM supports DL16 formats (FP16/BF16), IEEE_FP32, and integer formats (INT32/UINT32/INT64).
+    # ReStickifyOpHBM supports the DL16 format (FP16/BF16 both map to
+    # SEN169_FP16), IEEE_FP32, and the 32-bit integer formats (INT32/UINT32;
+    # int64 is downcast to IEEE_INT32 on the device).
     # Do not advertise an edge as feasible when codegen cannot lower it: this
     # is especially important for fp32-upcast graphs, where a later IEEE_FP32
     # restick can otherwise tie with and displace the valid FP16 restick before
