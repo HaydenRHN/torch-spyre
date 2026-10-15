@@ -55,7 +55,6 @@ from torch.fx.experimental.symbolic_shapes import free_unbacked_symbols
 from torch._inductor.virtualized import V
 from torch.utils._ordered_set import OrderedSet
 from torch_spyre._C import (
-    DataFormats,
     ElementArrangement,
     SpyreTensorLayout,
     get_device_dtype,
@@ -74,6 +73,7 @@ from .constants import (
     ELIDED_COPY_BACK_ATTR,
     KEEP_BY_INDEX_OP,
     MATMUL_REDUCTION_OPS,
+    RESTICKIFY_SUPPORTED_DEVICE_DTYPES,
     TOPK_OPS,
 )
 from .ir import FixedTiledLayout, SpyreConstantFallback
@@ -103,9 +103,11 @@ def register_operation_after_graph_edit(graph: GraphLowering, op: Operation) -> 
     same name.  The scheduler subsequently resolves a dependency to the wrong
     producer (or to one that occurs later) and fails while computing ancestors.
 
-    Keep upstream's naming convention, but find the first name that has never
-    been registered.  Scratchpad edits use this helper because they run late in
-    the lowering pipeline, after graph-pruning passes.
+    Keep upstream's naming convention, but find the first name that is not
+    currently registered.  Most removals keep the removed op in ``name_to_op``,
+    but ``dedup_and_promote_constants`` drops it, so its name can be reissued.
+    Scratchpad edits use this helper because they run late in the lowering
+    pipeline, after graph-pruning passes.
     """
     assert op.operation_name is None, f"Operation registered twice: {op}"
 
@@ -2513,14 +2515,15 @@ def compute_restickify_needed(
     ):
         return False, None
 
-    # ReStickifyOpHBM supports only the native FP16 device format
-    # (both logical float16 and bfloat16 map to SEN169_FP16).
+    # ReStickifyOpHBM supports the DL16 format (FP16/BF16 both map to
+    # SEN169_FP16), IEEE_FP32, and the 32-bit integer formats (INT32/UINT32;
+    # int64 is downcast to IEEE_INT32 on the device).
     # Do not advertise an edge as feasible when codegen cannot lower it: this
     # is especially important for fp32-upcast graphs, where a later IEEE_FP32
     # restick can otherwise tie with and displace the valid FP16 restick before
     # the conversion. This also deliberately precedes the factorized-layout
-    # target below: a concrete target is not actionable for a non-DL16 input.
-    if in_stl.device_dtype != DataFormats.SEN169_FP16:
+    # target below: a concrete target is not actionable for an unsupported input.
+    if in_stl.device_dtype not in RESTICKIFY_SUPPORTED_DEVICE_DTYPES:
         return True, None
 
     if factorized_layout_mismatch:

@@ -296,21 +296,6 @@ class TestDenseScatterSourceStl(unittest.TestCase):
             ),
         )
 
-    def test_rejects_non_dl16_source(self):
-        host_size = [64, 32]
-        host_stride = [32, 1]
-        source_stl = SpyreTensorLayout(host_size, torch.float32)
-        layout = FixedTiledLayout(
-            torch.device("spyre"),
-            torch.float32,
-            host_size,
-            host_stride,
-            source_stl,
-        )
-
-        with self.assertRaisesRegex(Unsupported, "ReStickifyOpHBM does not support"):
-            _dense_scatter_source_stl(layout)
-
 
 if __name__ == "__main__":
     unittest.main()
