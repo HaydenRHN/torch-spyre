@@ -4115,8 +4115,6 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
                     cached_randn((2, 56), dtype=torch.float16),
                 ),
             },
-            # restickify is fp16-only (ReStickifyOpHBM)
-            "expect_fail": ["2d_dim1_unaligned_fp32"],
         },
         (
             "test_pad",
