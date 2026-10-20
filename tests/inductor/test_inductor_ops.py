@@ -7673,6 +7673,23 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
                 "3d_8x6x4": (cached_randn((2, 3, 64), dtype=torch.float16), 8, 6, 4),
             },
         },
+        ("test_repeat_out", "test_repeat_out_cpu"): {
+            "param_sets": {
+                "1d_1": (cached_randn((64), dtype=torch.float16), (1,)),
+                "1d_1_int32": (torch.randint(0, 100, (64,), dtype=torch.int32), (1,)),
+                "1d_1_size1": (cached_randn((1), dtype=torch.float16), (1,)),
+                "1d_1_size1_int32": (
+                    torch.randint(0, 100, (1,), dtype=torch.int32),
+                    (1,),
+                ),
+                "1d_fp32": (cached_randn((64), dtype=torch.float32), (4,)),
+                "2d_3x2": (cached_randn((2, 64), dtype=torch.float16), (3, 2)),
+                "2d_4x6": (cached_randn((2, 64), dtype=torch.float16), (4, 6)),
+                "2d_1x1": (cached_randn((2, 64), dtype=torch.float16), (1, 1)),
+                "2d_fp32": (cached_randn((2, 64), dtype=torch.float32), (3, 2)),
+                "3d_8x6x4": (cached_randn((2, 3, 64), dtype=torch.float16), (8, 6, 4)),
+            },
+        },
         # TODO: torch.prod(x) (reduction over all tensor elements) is not yet
         # supported. Once support for all torch.prod forms is implemented, we
         # can register `prod` in CORE_REDUCTION_OPS_DICT like other reduction ops.
@@ -11950,7 +11967,20 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
         def fn(a):
             return a.repeat(*repeat_args)
 
-        self.compare_with_cpu(fn, x, run_eager=False)
+        self.compare_with_cpu(fn, x)
+
+    def test_repeat_out_cpu(self, x, repeats):
+        num_leading = len(repeats) - x.dim()
+        full_shape = (1,) * max(0, num_leading) + tuple(x.shape)
+        repeats_full = (1,) * max(0, -num_leading) + tuple(repeats)
+        out_shape = tuple(s * r for s, r in zip(full_shape, repeats_full))
+
+        def fn(a):
+            out = torch.empty(out_shape, dtype=a.dtype, device=a.device)
+            torch.ops.aten.repeat.out(a, list(repeats), out=out)
+            return out
+
+        self.compare_with_cpu(fn, x)
 
     def test_unfold_cpu(self, dimension, size, step, x):
         """Test unfold operation (view only, no contiguous).
