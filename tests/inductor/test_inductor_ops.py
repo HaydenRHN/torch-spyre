@@ -6790,10 +6790,10 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
             "ops_dict": {"where": torch.where},
             # A host bool mask converted to fp32 for an int32 where is staggered,
             # and a STANDARD full operand cannot combine with it. Pending
-            # de-staggering support (#4242).
+            # de-staggering support (#5495).
             "expect_fail": {
-                "int32_2d": "host bool mask with fp32/int32 values is refused as mixed EA, pending #4242",
-                "int32_3d": "host bool mask with fp32/int32 values is refused as mixed EA, pending #4242",
+                "int32_2d": "host bool mask with fp32/int32 values is refused as mixed EA, pending #5495",
+                "int32_3d": "host bool mask with fp32/int32 values is refused as mixed EA, pending #5495",
             },
             "param_sets": {
                 "fp16_2d": (
@@ -6859,9 +6859,9 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
             "ops_dict": {"where": torch.where},
             # int64 values are promoted to fp32, so a host bool mask is converted
             # to a staggered fp32 here as well. Pending de-staggering support
-            # (#4242).
+            # (#5495).
             "expect_fail": {
-                "int64_1x24": "host bool mask with fp32/int values is refused as mixed EA, pending #4242",
+                "int64_1x24": "host bool mask with fp32/int values is refused as mixed EA, pending #5495",
             },
             "param_sets": {
                 "fp16_2d": (
@@ -6938,12 +6938,12 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
         ("test_masked_fill_scalar", "test_masked_fill_scalar_eager"): {
             "ops_dict": {"masked_fill": torch.Tensor.masked_fill},
             # masked_fill lowers to where; a host bool mask with fp32/int32 values
-            # is refused as mixed EA. Pending de-staggering support (#4242).
+            # is refused as mixed EA. Pending de-staggering support (#5495).
             "expect_fail": {
-                "fp32_2d": "host bool mask with fp32/int32 values is refused as mixed EA, pending #4242",
-                "fp32_3d": "host bool mask with fp32/int32 values is refused as mixed EA, pending #4242",
-                "int32_2d": "host bool mask with fp32/int32 values is refused as mixed EA, pending #4242",
-                "int32_3d": "host bool mask with fp32/int32 values is refused as mixed EA, pending #4242",
+                "fp32_2d": "host bool mask with fp32/int32 values is refused as mixed EA, pending #5495",
+                "fp32_3d": "host bool mask with fp32/int32 values is refused as mixed EA, pending #5495",
+                "int32_2d": "host bool mask with fp32/int32 values is refused as mixed EA, pending #5495",
+                "int32_3d": "host bool mask with fp32/int32 values is refused as mixed EA, pending #5495",
             },
             "param_sets": {
                 "fp16_2d_zero": (

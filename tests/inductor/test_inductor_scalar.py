@@ -421,11 +421,11 @@ class TestSdpaScalarHyperparameters:
         """SDPA: causal mask via ``triu`` + ``masked_fill(..., -inf)``."""
         if dtype == torch.float32:
             # fp32 scores need the host-bool mask cast to fp32, which yields a
-            # staggered EA that is refused as mixed EA, pending #4242.
+            # staggered EA that is refused as mixed EA, pending #5495.
             strict_xfail(
                 request,
                 (torch._inductor.exc.InductorError, NotImplementedError),
-                "fp32 masked_fill mask refused as mixed EA, pending #4242",
+                "fp32 masked_fill mask refused as mixed EA, pending #5495",
             )
 
         def causal_attention(q, k, v):
