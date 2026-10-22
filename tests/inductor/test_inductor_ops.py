@@ -6892,6 +6892,9 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
                 "int32_2d": "host bool mask with fp32/int32 values is refused as mixed EA, pending #5495",
                 "int32_3d": "host bool mask with fp32/int32 values is refused as mixed EA, pending #5495",
             },
+            # Bool values are not supported: they must be refused as mixed EA, not
+            # computed (a computed result is silently wrong).
+            "expect_raise": {"bool_2d": "mixed EA"},
             "param_sets": {
                 "fp16_2d": (
                     cached_randn((10, 10), dtype=torch.float16) > 1,
@@ -6929,6 +6932,11 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
                     cached_randn((2, 8, 64), dtype=torch.float16) > 0,
                     torch.randint(0, 1000, (2, 8, 64), dtype=torch.int32),
                     torch.randint(0, 1000, (2, 8, 64), dtype=torch.int32),
+                ),
+                "bool_2d": (
+                    cached_randn((4, 64), dtype=torch.float16) > 0,
+                    cached_randn((4, 64), dtype=torch.float16, differentiation=1) > 0,
+                    cached_randn((4, 64), dtype=torch.float16, differentiation=2) > 0,
                 ),
             },
         },
@@ -7033,7 +7041,10 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
             },
         },
         ("test_masked_fill_scalar", "test_masked_fill_scalar_eager"): {
-            "ops_dict": {"masked_fill": torch.Tensor.masked_fill},
+            "ops_dict": {
+                "masked_fill": lambda x, mask, value: x.masked_fill(mask, value),
+                "masked_fill_": lambda x, mask, value: x.masked_fill_(mask, value),
+            },
             # masked_fill lowers to where; a host bool mask with fp32/int32 values
             # is refused as mixed EA. Pending de-staggering support (#5495).
             "expect_fail": {
@@ -7061,6 +7072,11 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
                 "fp16_broadcast": (
                     cached_randn((64,), dtype=torch.float16) > 0,
                     cached_randn((4, 64), dtype=torch.float16),
+                    0.0,
+                ),
+                "fp16_empty": (
+                    cached_randn((4, 0), dtype=torch.float16) > 0,
+                    cached_randn((4, 0), dtype=torch.float16),
                     0.0,
                 ),
                 "fp32_2d": (
@@ -11033,7 +11049,11 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
         )
 
     def test_masked_fill_scalar_eager(self, op, mask, x, value):
-        self.compare_with_cpu(lambda mask, x: op(x, mask, value), mask, x)
+        # clone_inputs: the in-place op mutates x, so the CPU reference and the
+        # Spyre run must each get a fresh copy.
+        self.compare_with_cpu(
+            lambda mask, x: op(x, mask, value), mask, x, clone_inputs=True
+        )
 
     def test_attn_qkv_paths(self, q, k, v):
         # This tests the dataflows between rope/qkv projection and SDPA for q, k, and v
