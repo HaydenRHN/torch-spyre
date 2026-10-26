@@ -389,6 +389,15 @@ def _indirect_stride_idx(
     return None
 
 
+def _reject_stick_indexed_gather(stl: SpyreTensorLayout, stride_idx: int) -> None:
+    """Refuse a non-DL16 gather indexed along its stick dim until #4360 is fixed."""
+    if stride_idx == 0 and stl.device_dtype != DataFormats.SEN169_FP16:
+        raise Unsupported(
+            f"gather from a {stl.device_dtype} tensor indexed along its stick "
+            "dimension (#4360)"
+        )
+
+
 def _dim_order_is_compliant(value_stl: SpyreTensorLayout, stride_idx: int) -> bool:
     """Check if indirect access is at the outermost (leftmost) device position."""
     v_n = len(value_stl.stride_map)
