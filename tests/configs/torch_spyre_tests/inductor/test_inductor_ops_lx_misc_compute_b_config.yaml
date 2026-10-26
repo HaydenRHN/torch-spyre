@@ -53,5 +53,6 @@ test_suite_config:
             - LxPlanning.*::test_where.*_lx_planning_(pointwise|reduction)
             - LxPlanning.*::test_masked_fill_scalar.*_lx_planning_(pointwise|reduction)
             - LxPlanning.*::test_restickify_add_transpose.*_lx_planning_(pointwise|reduction)
+            - LxPlanning.*::test_restickify_clone.*_lx_planning_(pointwise|reduction)
             - LxPlanning.*::test_prod.*_lx_planning_(pointwise|reduction)
           mode: mandatory_success
