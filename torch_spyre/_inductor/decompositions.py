@@ -1824,8 +1824,7 @@ def _mask_indices(x: torch.Tensor, indices: torch.Tensor, dim: int) -> torch.Ten
     dim = dim % x.ndim
     ones = torch.ones_like(x)
     marker = torch.ops.spyre.keep_by_index(ones, indices, dim, 0.0)
-    masked = torch.where(marker == 1.0, float("-inf"), x)
-    return masked.clone()
+    return torch.where(marker == 1.0, float("-inf"), x)
 
 
 @register_spyre_decompositions([torch.ops.aten.topk])
