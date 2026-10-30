@@ -100,6 +100,8 @@ class Sandbox:
         ("artifact_results", "{runs}", "run_id"),
         ("artifact_result_reasons", "{runs}", "run_id"),
         ("artifact_subscriptions", "1", "subscription_id"),
+        ("rbac_roles", "1", "role_id"),
+        ("rbac_bindings", "1", "binding_id"),
         (
             "artifact_dispatches",
             "artifact_id GLOBAL IN (SELECT artifact_id FROM {db}.artifacts)",
@@ -118,6 +120,11 @@ class Sandbox:
             "pipeline_run_legs",
             "run_key GLOBAL IN (SELECT run_key FROM {db}.pipeline_runs)",
             "(run_key, arch, component, image, kind)",
+        ),
+        (
+            "pipeline_run_links",
+            "from_run_key GLOBAL IN (SELECT run_key FROM {db}.pipeline_runs)",
+            "link_id",
         ),
         (
             "ci_run_timings",
