@@ -782,11 +782,6 @@ _SORT_UNALIGNED = (
     "the staggered fp32 value of the int64 index cast does not fill whole stick "
     "pairs, so the indices come back wrong (#3999)"
 )
-_SORT_STICK_FUSED = (
-    "stable sort along the stick dim fuses flip's gather, neg and topk into one "
-    "kernel that dbo-opt rejects with 'There must be at least one valid "
-    "candidate' (needs #4975)"
-)
 
 TO_DTYPE_REDUCTION_DTYPES = [torch.float16, torch.float32]
 
@@ -2465,14 +2460,12 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
         ("test_sort_unsplittable_with_inf", "test_sort_unsplittable_with_inf_cpu"): {
             "param_sets": {"dim0": (0,), "dim1": (1,)},
         },
-        # Stable sort along the stick dim fails on main: Inductor fuses flip's
-        # gather, neg and topk into one kernel that DeepTools rejects ("There
-        # must be at least one valid candidate"). It compiles with #4975.
-        # TODO: remove each entry when #4975 lands.
+        # Stable sort along the stick dim: the values are exact, the int64
+        # index cast fails (see _SORT_UNALIGNED).
         ("test_sort_stick_dim", "test_sort_stick_dim_cpu"): {
             "expect_fail": {
-                "2d_ties_dim1_desc": _SORT_STICK_FUSED,
-                "1d_ties": _SORT_STICK_FUSED,
+                "2d_ties_dim1_desc": _SORT_UNALIGNED,
+                "1d_ties": _SORT_UNALIGNED,
             },
             "param_sets": {
                 "2d_ties_dim1_desc": (
@@ -10731,14 +10724,6 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
                 "spyre",
             )
 
-    @pytest.mark.xfail(
-        strict=True,
-        raises=InductorError,
-        reason=(
-            "topk.ddl (dxp_standalone) does not support sparse input tensors; "
-            "the backend compiler fails (#4732)"
-        ),
-    )
     def test_topk_sparse_input(self):
         # amax over the stick dim produces a sparse output (constant 0 in the
         # rightmost device coord). topk.ddl does not accept sparse inputs
@@ -10818,11 +10803,10 @@ class TestOps(unittest.TestCase, metaclass=ParameterizedTestMeta):
 
     @pytest.mark.xfail(
         strict=True,
-        raises=InductorError,
+        raises=AssertionError,
         reason=(
-            "peeling a stable sort along the stick dim fails in the masking "
-            "step: OpSpecValidationError 'where3: args have different stick "
-            "loop variables' (needs #4975)"
+            "a stable sort along the stick dim returns wrong values when the "
+            "flip -> topk has k > 64 (TODO: cite an issue)"
         ),
     )
     def test_sort_stick_dim_peeling(self):
